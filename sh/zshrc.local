@@ -135,6 +135,8 @@ alias dev="npx @gwai/dev@beta"
 alias devx="npx @gwai/dev"
 alias deva="npx @gwai/dev@alpha"
 alias devb="npx @gwai/dev@beta"
+alias md="npx @gwai/dev@beta md"
+alias t='node ~/src/aidev2/bin/t'
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Node Version Manager (NVM)
@@ -219,9 +221,9 @@ gc() { echo "git add -A && git commit -am $@"; git add -A && git commit -am "$@"
 gpr() { echo "git pull --rebase --prune"; git pull --rebase --prune; }                                             # Pull with rebase and prune
 grc() { echo "git add . && git rebase --continue"; git add . && git rebase --continue; }                           # Continue rebase after adding changes
 gp() { echo "git push origin $(git rev-parse --abbrev-ref HEAD)"; git push origin "$(git rev-parse --abbrev-ref HEAD)"; } # Push to the current branch
-gco() { echo "git checkout -b sc/$1 2>/dev/null || git checkout sc/$1"; git checkout -b sc/"$1" 2>/dev/null || git checkout sc/"$1"; } # Checkout or create a feature branch
+gco() { echo "git checkout -b $1 2>/dev/null || git checkout $1"; git checkout -b "$1" 2>/dev/null || git checkout "$1"; } # Checkout or create a feature branch
 gcom() { echo "git checkout main"; git checkout main; }                                                            # Checkout master branch
-gm() { echo "git pull --rebase --prune && git merge --squash --ff-only sc/$1"; git pull --rebase --prune && git merge --squash --ff-only sc/"$1"; } # Pull and merge a feature branch with squash
+gm() { echo "git pull --rebase --prune && git merge --squash --ff-only $1"; git pull --rebase --prune && git merge --squash --ff-only "$1"; } # Pull and merge a feature branch with squash
 gl() { echo "git log --pretty=format:'%Cblue%h %ad %Cgreen%cn %Creset%s %Cred%d' --decorate --date=short -n 20"; git log --pretty=format:'%Cblue%h %ad %Cgreen%cn %Creset%s %Cred%d' --decorate --date=short -n 20; } # Display formatted git log
 gwa() {                                                                                                        # Create git worktree as peer directory
     if [[ -z "$1" ]]; then
@@ -309,7 +311,7 @@ wt() {                                                                          
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 gcommits() { echo "git shortlog --summary --numbered"; git shortlog --summary --numbered; }                        # Show commit summaries
 gd() { echo "git diff $@"; git diff "$@"; }                                                                        # Show git diff
-igls() { echo "git log --pretty=format:'%Cblue%ad %Cgreen%cn %Creset%s' --decorate -n 20 --stat --date=short"; git log --pretty=format:'%Cblue%ad %Cgreen%cn %Creset%s %Cred%d' --decorate --date=short -n 20 --stat; } # Display detailed git log with stats
+gls() { echo "git log --pretty=format:'%Cblue%ad %Cgreen%cn %Creset%s' --decorate -n 20 --stat --date=short"; git log --pretty=format:'%Cblue%ad %Cgreen%cn %Creset%s %Cred%d' --decorate --date=short -n 20 --stat; } # Display detailed git log with stats
 gpf() { echo "git push -f origin $(git rev-parse --abbrev-ref HEAD)"; git push -f origin "$(git rev-parse --abbrev-ref HEAD)"; } # Force push current branch
 gprb() { echo "git fetch && git rebase origin/master"; git fetch && git rebase origin/master; }                    # Fetch and rebase from master
 grh() { echo "git reset HEAD^"; git reset HEAD^; }                                                                 # Reset to previous commit
@@ -318,7 +320,7 @@ gsb() { echo "git show-branch -a"; git show-branch -a; }                        
 gsb2() { echo "git show-branch $(git symbolic-ref --short HEAD) master"; git show-branch "$(git symbolic-ref --short HEAD)" master; } # Show current and master branch
 gt() { echo "git tag -l"; git tag -l; }                                                                            # List all tags
 gb() { echo "git branch -avv"; git branch -avv; }                                                                  # List all branches with details
-gbd() { echo "git branch -D sc/$@"; git branch -D "sc/$@"; }                                                       # Delete a feature branch
+gbd() { echo "git branch -D $@"; git branch -D "$@"; }                                                             # Delete a feature branch
 gbehind() { echo "git log --pretty=format:'%Cblue%ad %Creset%s%Cgreen [%cn] %Cred%d' --decorate --date=short -n 25 ^$(git rev-parse --abbrev-ref HEAD) master"; git log --pretty=format:"%Cblue%ad %Creset%s%Cgreen [%cn] %Cred%d" --decorate --date=short -n 25 "^$(git rev-parse --abbrev-ref HEAD)" master; } # Show commits behind master
 gca() { echo "git commit --amend"; git commit --amend; }                                                           # Amend the last commit
 gchanges() { echo "git log $(git merge-base HEAD master)..$(git symbolic-ref --short HEAD)"; git log "$(git merge-base HEAD master)".."$(git symbolic-ref --short HEAD)"; } # Show changes between current branch and master
