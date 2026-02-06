@@ -199,7 +199,9 @@
   ;; If you want to interpret YAML front matter in your .md
   ;; (add-hook 'markdown-mode-hook 'flyspell-mode)  ; Disabled - no spell checker installed
   (setq markdown-enable-math t)
-  (setq markdown-command "pandoc --from markdown --to html5 --mathjax")) ;; brew install pandoc
+  (setq markdown-command "pandoc --from markdown --to html5 --mathjax") ;; brew install pandoc
+  :hook (markdown-mode . (lambda ()
+                           (setq-local fill-column 80))))
 
 
 ;;=============================================================================

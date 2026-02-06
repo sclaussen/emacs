@@ -12,8 +12,8 @@ fi
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Workspace Configuration
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Set WORKSPACE_ROOT if not already set (containers may override this)
-export WORKSPACE_ROOT="${WORKSPACE_ROOT:-$HOME/src}"
+# Returns the effective workspace root: WSROOT in containers, config value on host
+wsroot() { echo "${WSROOT:-$(dev config g workspace)}"; }
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Locale Configuration (important for Debian containers)
@@ -91,7 +91,7 @@ bindkey '^N' down-line-or-beginning-search
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Node.js Configuration
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-export NODE_TLS_REJECT_UNAUTHORIZED=0
+# export NODE_TLS_REJECT_UNAUTHORIZED=0
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Custom Functions and Variables
@@ -120,23 +120,16 @@ alias p3='python3'
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Claude Code
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-alias cc='claude --dangerously-skip-permissions --settings ${WORKSPACE_ROOT}/.claude/settings.json'
-alias ccc='claude --dangerously-skip-permissions --continue --settings ${WORKSPACE_ROOT}/.claude/settings.json'
-
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Dev CLI (aidev repo clones)
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-alias dev1='node ~/src/aidev1/dev.js'
-alias dev2='node ~/src/aidev2/dev.js'
-alias dev3='node ~/src/aidev3/dev.js'
-alias dev4='node ~/src/aidev4/dev.js'
-alias dev5='node ~/src/aidev5/dev.js'
-alias dev="npx @gwai/dev@beta"
-alias devx="npx @gwai/dev"
-alias deva="npx @gwai/dev@alpha"
-alias devb="npx @gwai/dev@beta"
-alias md="npx @gwai/dev@beta md"
-alias t='node ~/src/aidev2/bin/t'
+if [[ $IS_DEBIAN == true ]]; then
+    alias cc='claude --settings ${WSROOT}/.claude/settings.json --mcp-config ${WSROOT}/.mcp.json --dangerously-skip-permissions'
+    alias ccc='claude --settings ${WSROOT}/.claude/settings.json --mcp-config ${WSROOT}/.mcp.json --dangerously-skip-permissions --continue'
+    alias ccr='claude --settings ${WSROOT}/.claude/settings.json --mcp-config ${WSROOT}/.mcp.json --dangerously-skip-permissions --resume'
+fi
+if [[ $IS_MACOS == true ]]; then
+    alias cc='NODE_TLS_REJECT_UNAUTHORIZED=0 claude --settings ~/src/.claude/settings.json --mcp-config ~/src/.mcp.json --dangerously-skip-permissions'
+    alias ccc='NODE_TLS_REJECT_UNAUTHORIZED=0 claude --settings ~/src/.claude/settings.json --mcp-config ~/src/.mcp.json --dangerously-skip-permissions --continue'
+    alias ccr='NODE_TLS_REJECT_UNAUTHORIZED=0 claude --settings ~/src/.claude/settings.json --mcp-config ~/src/.mcp.json --dangerously-skip-permissions --resume'
+fi
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Node Version Manager (NVM)
@@ -371,17 +364,71 @@ load_virtualenv() {
 }
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Prompt Theme (dark/light background support)
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Auto-detect on macOS, default to dark elsewhere. Override with: theme light|dark
+if [[ -z "$ZSH_THEME_BG" ]]; then
+    if [[ $IS_MACOS == true ]]; then
+        local _auto=$(defaults read -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null)
+        local _mode=$(defaults read -g AppleInterfaceStyle 2>/dev/null)
+        if { [[ "$_auto" == "1" && -z "$_mode" ]] || [[ "$_mode" == "Dark" ]]; }; then
+            export ZSH_THEME_BG=dark
+        else
+            export ZSH_THEME_BG=light
+        fi
+    else
+        export ZSH_THEME_BG=dark
+    fi
+fi
+
+_apply_ls_colors() {
+    if [[ $IS_MACOS == true ]]; then
+        if [[ "$ZSH_THEME_BG" == "light" ]]; then
+            export LSCOLORS="ExFxBxDxCxegedabagacad"
+        else
+            export LSCOLORS="GxBxxxxxCxxxxxxxxxGxGx"
+        fi
+    fi
+}
+
+theme() {
+    case "$1" in
+        light|l) export ZSH_THEME_BG=light ;;
+        dark|d)  export ZSH_THEME_BG=dark ;;
+        *)
+            if [[ "$ZSH_THEME_BG" == "dark" ]]; then
+                export ZSH_THEME_BG=light
+            else
+                export ZSH_THEME_BG=dark
+            fi
+            ;;
+    esac
+    _apply_ls_colors
+    echo "Theme: $ZSH_THEME_BG"
+}
+
+# Apply ls colors on shell startup
+_apply_ls_colors
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Prompt and CD tweaks
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 precmd() {
     # Get current user (use zsh variable instead of id command)
     local current_user="${USER:-${USERNAME:-unknown}}"
 
-    # Colors matching Claude Code statusline exactly
-    local branch_color='%F{10}'     # Bright green for branch (matches \033[92m)
-    local username_color='%F{14}'   # Bright cyan for username
-    local gold='%F{220}'            # Gold for directory path (matches \033[38;2;255;215;0m)
-    local reset='%f'                # Reset color
+    # Color palettes for dark and light backgrounds
+    local branch_color username_color dir_color
+    local reset='%f'
+    if [[ "$ZSH_THEME_BG" == "light" ]]; then
+        branch_color='%F{22}'       # Dark green for branch
+        username_color='%F{24}'     # Dark teal for username
+        dir_color='%F{130}'         # Dark orange/brown for directory path
+    else
+        branch_color='%F{10}'       # Bright green for branch (matches \033[92m)
+        username_color='%F{14}'     # Bright cyan for username
+        dir_color='%F{220}'         # Gold for directory path (matches \033[38;2;255;215;0m)
+    fi
 
     # Git branch information
     local git_info=""
@@ -409,7 +456,7 @@ precmd() {
         display_path="%~"
     fi
 
-    PROMPT="${git_info}${username_color}${current_user}${reset} ${gold}${display_path} \$${reset} "
+    PROMPT="${git_info}${username_color}${current_user}${reset} ${dir_color}${display_path} \$${reset} "
 }
 
 # This is a ZSHRC hook that runs after the directory is changed
