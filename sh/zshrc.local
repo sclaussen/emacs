@@ -151,7 +151,10 @@ alias genpdf='markdown-pdf'                                                     
 alias path='echo -e ${PATH//:/\\n}'                                                # Display each PATH entry on separate lines
 # Tag generation aliases based on OS
 alias lc="find . -type f -name '*.js' -print | grep -v node_ | grep -v .git | grep -v '/.#' | xargs wc -l"     # Line count for JS files
-tre() { tree -aC -I '.git|node_modules|.DS_Store' --dirsfirst "$@"; }              # Display directory tree excluding certain directories
+tre() { tree -aC -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }              # Display directory tree excluding certain directories
+tred() { tree -daC -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }            # Display directory tree (dirs only) excluding certain directories
+tre2() { tree -daCL 2 -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }         # Display directory tree (dirs only, 2 levels deep)
+tre3() { tree -daCL 3 -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }         # Display directory tree (dirs only, 3 levels deep)
 zipf() { zip -r "$1".zip "$1"; }                                                   # Create a ZIP archive of a folder
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -366,9 +369,13 @@ load_virtualenv() {
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Prompt Theme (dark/light background support)
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Auto-detect on macOS, default to dark elsewhere. Override with: theme light|dark
+# State file: ~/.theme (contains "dark" or "light")
+# Toggle: t [dark|light]  — no arg toggles, see theme() in zshrc
+# On startup: reads ~/.theme, falls back to macOS appearance, defaults to dark
 if [[ -z "$ZSH_THEME_BG" ]]; then
-    if [[ $IS_MACOS == true ]]; then
+    if [[ -f ~/.theme ]]; then
+        export ZSH_THEME_BG=$(cat ~/.theme)
+    elif [[ $IS_MACOS == true ]]; then
         local _auto=$(defaults read -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null)
         local _mode=$(defaults read -g AppleInterfaceStyle 2>/dev/null)
         if { [[ "$_auto" == "1" && -z "$_mode" ]] || [[ "$_mode" == "Dark" ]]; }; then
@@ -391,22 +398,6 @@ _apply_ls_colors() {
     fi
 }
 
-theme() {
-    case "$1" in
-        light|l) export ZSH_THEME_BG=light ;;
-        dark|d)  export ZSH_THEME_BG=dark ;;
-        *)
-            if [[ "$ZSH_THEME_BG" == "dark" ]]; then
-                export ZSH_THEME_BG=light
-            else
-                export ZSH_THEME_BG=dark
-            fi
-            ;;
-    esac
-    _apply_ls_colors
-    echo "Theme: $ZSH_THEME_BG"
-}
-
 # Apply ls colors on shell startup
 _apply_ls_colors
 
@@ -414,6 +405,17 @@ _apply_ls_colors
 # Prompt and CD tweaks
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 precmd() {
+    # Sync theme from ~/.theme state file (for cross-pane updates)
+    if [[ -f ~/.theme ]]; then
+        local _ft=$(cat ~/.theme)
+        if [[ "$_ft" != "$ZSH_THEME_BG" ]]; then
+            export ZSH_THEME_BG="$_ft"
+            _apply_ls_colors
+            # Update iTerm2 profile for this pane if on macOS
+            [[ $IS_MACOS == true ]] && printf '\e]1337;SetProfile=%s\a' "$([[ "$_ft" == dark ]] && echo Dark || echo Light)"
+        fi
+    fi
+
     # Get current user (use zsh variable instead of id command)
     local current_user="${USER:-${USERNAME:-unknown}}"
 

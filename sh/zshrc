@@ -134,7 +134,7 @@ function dev() {
             ;;
         -l|--latest)
             shift
-            npx @gwai/dev@latest "$@"
+            npx @aidev/dev@latest "$@"
             return
             ;;
     esac
@@ -148,7 +148,7 @@ function dev() {
     fi
 
     # If we ARE NOT in an ai-dev repository
-    npx @gwai/dev@latest "$@"
+    npx @aidev/dev@latest "$@"
 }
 
 # Smart md function: markdown preview with same routing as dev
@@ -167,7 +167,7 @@ function md() {
             ;;
         -l|--latest)
             shift
-            npx @gwai/dev@latest md "$@"
+            npx @aidev/dev@latest md "$@"
             return
             ;;
     esac
@@ -181,7 +181,7 @@ function md() {
     fi
 
     # If we ARE NOT in an ai-dev repository
-    npx @gwai/dev@latest md "$@"
+    npx @aidev/dev@latest md "$@"
 }
 
 # Aliases for local dev CLI versions (dev1-dev5)
@@ -190,6 +190,8 @@ alias dev2='node ~/src/dev2/dev.js'
 alias dev3='node ~/src/dev3/dev.js'
 alias dev4='node ~/src/dev4/dev.js'
 alias dev5='node ~/src/dev5/dev.js'
+alias dev6='node ~/src/dev6/dev.js'
+alias dev7='node ~/src/dev7/dev.js'
 
 # Test runner aliases
 alias t1='node ~/src/dev1/test/test.js'
@@ -197,6 +199,8 @@ alias t2='node ~/src/dev2/test/test.js'
 alias t3='node ~/src/dev3/test/test.js'
 alias t4='node ~/src/dev4/test/test.js'
 alias t5='node ~/src/dev5/test/test.js'
+alias t6='node ~/src/dev6/test/test.js'
+alias t7='node ~/src/dev7/test/test.js'
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # macOS History Configuration
@@ -209,6 +213,59 @@ export HISTFILE=~/.zsh_history
 unhibdemo() {
   node ~/src/dev/tools/unhib/unhib.js -p dev.xapps.claimsdev.demodev -p dev.xapps.claimsdev.demoqa
 }
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Theme Toggle (dark/light)
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Toggles: ~/.theme state file, git config statusline.theme, iTerm2 profile, LSCOLORS, prompt
+# Usage: t [dark|light|d|l]  — no arg toggles
+_iterm_broadcast_profile() {
+    local profile="$1"
+    local my_tty=$(tty 2>/dev/null)
+    osascript <<EOF 2>/dev/null
+tell application "iTerm2"
+    repeat with w in windows
+        repeat with t in tabs of w
+            repeat with s in sessions of t
+                if tty of s is not "$my_tty" then
+                    tell s to write text "printf '\\\\e]1337;SetProfile=$profile\\\\a'"
+                end if
+            end repeat
+        end repeat
+    end repeat
+end tell
+EOF
+}
+
+theme() {
+    local target
+    case "$1" in
+        light|l) target=light ;;
+        dark|d)  target=dark ;;
+        *)
+            local current=$(cat ~/.theme 2>/dev/null || echo "${ZSH_THEME_BG:-dark}")
+            [[ "$current" == "dark" ]] && target=light || target=dark
+            ;;
+    esac
+
+    # State file + env var
+    echo "$target" > ~/.theme
+    export ZSH_THEME_BG="$target"
+
+    # Git config (Claude statusline reads statusline.theme)
+    git config --global statusline.theme "$target"
+
+    # LSCOLORS (defined in zshrc.local, available after source)
+    typeset -f _apply_ls_colors >/dev/null && _apply_ls_colors
+
+    # iTerm2: current pane via escape code, all others via AppleScript
+    local iterm_profile=$([[ "$target" == "dark" ]] && echo Dark || echo Light)
+    printf '\e]1337;SetProfile=%s\a' "$iterm_profile"
+    _iterm_broadcast_profile "$iterm_profile" &
+
+    echo "Theme: $target"
+}
+alias t=theme
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Source cross-platform configuration
