@@ -155,6 +155,63 @@ tre() { tree -aC -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; 
 tred() { tree -daC -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }            # Display directory tree (dirs only) excluding certain directories
 tre2() { tree -daCL 2 -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }         # Display directory tree (dirs only, 2 levels deep)
 tre3() { tree -daCL 3 -I '.git|node_modules|.DS_Store|__pycache__' --dirsfirst "$@"; }         # Display directory tree (dirs only, 3 levels deep)
+trep() {                                                                            # Tree view of profiles/capabilities at repo root
+    local root
+    root=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [[ -z "$root" ]]; then
+        echo "Error: Not in a git repository"
+        return 1
+    fi
+    local _trep_sub() {
+        local dir="$1" label="$2" prefix="$3" is_last="$4"
+        local connector=$([[ "$is_last" == "1" ]] && echo "└── " || echo "├── ")
+        local child_prefix=$([[ "$is_last" == "1" ]] && echo "    " || echo "│   ")
+        echo "${prefix}${connector}${label}"
+        local entries=("$dir"/*(N:t))
+        local j=0
+        for entry in "${entries[@]}"; do
+            j=$((j + 1))
+            local ec=$([[ $j -eq ${#entries[@]} ]] && echo "└── " || echo "├── ")
+            echo "${prefix}${child_prefix}${ec}${entry}"
+        done
+    }
+    local _trep_section() {
+        local dir="$1" label="$2" prefix="$3" is_last="$4"
+        local connector=$([[ "$is_last" == "1" ]] && echo "└── " || echo "├── ")
+        local child_prefix=$([[ "$is_last" == "1" ]] && echo "    " || echo "│   ")
+        echo "${prefix}${connector}${label}"
+        local subs=()
+        [[ -d "$dir/profiles" ]] && subs+=(profiles)
+        [[ -d "$dir/capabilities" ]] && subs+=(capabilities)
+        local i=0
+        for sub in "${subs[@]}"; do
+            i=$((i + 1))
+            local sub_last=$([[ $i -eq ${#subs[@]} ]] && echo "1" || echo "0")
+            _trep_sub "$dir/$sub" "$sub" "${prefix}${child_prefix}" "$sub_last"
+        done
+    }
+    echo "."
+    local sections=()
+    [[ -d "$root/profiles" ]] && sections+=(profiles)
+    [[ -d "$root/capabilities" ]] && sections+=(capabilities)
+    for nsdir in "$root"/ns/*(N/); do
+        sections+=("ns/${nsdir:t}")
+    done
+    if [[ ${#sections} -eq 0 ]]; then
+        echo "  (no profiles/, capabilities/, or ns/*/ directories found)"
+        return 1
+    fi
+    local i=0
+    for section in "${sections[@]}"; do
+        i=$((i + 1))
+        local is_last=$([[ $i -eq ${#sections[@]} ]] && echo "1" || echo "0")
+        if [[ "$section" == "profiles" || "$section" == "capabilities" ]]; then
+            _trep_sub "$root/$section" "$section" "" "$is_last"
+        else
+            _trep_section "$root/$section" "$section" "" "$is_last"
+        fi
+    done
+}
 zipf() { zip -r "$1".zip "$1"; }                                                   # Create a ZIP archive of a folder
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -299,6 +356,37 @@ wt() {                                                                          
     for path in "${parent_dir}/${repo_name}-"*(/N); do
         local name="${path:t}"          # basename via zsh expansion
         echo "${name#${repo_name}-}"    # strip prefix
+    done
+}
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Git Pull All Repos
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+gpa() {                                                                                                            # Git pull all repos in ~/src on main with clean working tree
+    local src_dir="$HOME/src"
+    [[ ! -d "$src_dir" ]] && echo "Directory not found: $src_dir" && return 1
+    local repo branch before after count
+    for dir in "$src_dir"/*/; do
+        [[ ! -d "$dir/.git" ]] && continue
+        repo="${dir:t:r}"
+        branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD 2>/dev/null)
+        if [[ "$branch" != "main" && "$branch" != "master" ]]; then
+            echo "$repo: on $branch"
+            continue
+        fi
+        if ! git -C "$dir" diff-index --quiet HEAD -- 2>/dev/null; then
+            echo "$repo: uncommitted changes"
+            continue
+        fi
+        before=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
+        git -C "$dir" pull --rebase --prune >/dev/null 2>&1
+        after=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
+        if [[ "$before" == "$after" ]]; then
+            echo "$repo: up to date"
+        else
+            count=$(git -C "$dir" rev-list --count "$before".."$after" 2>/dev/null)
+            echo "$repo: pulled $count commits"
+        fi
     done
 }
 
