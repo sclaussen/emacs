@@ -366,7 +366,7 @@ gpa() {                                                                         
     local src_dir="$HOME/src"
     [[ ! -d "$src_dir" ]] && echo "Directory not found: $src_dir" && return 1
     local repo branch before after count
-    for dir in "$src_dir"/*/; do
+    for dir in "$src_dir"/dev*/ "$src_dir"/odin/; do
         [[ ! -d "$dir/.git" ]] && continue
         repo="${dir:t:r}"
         branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD 2>/dev/null)
@@ -374,6 +374,7 @@ gpa() {                                                                         
             echo "$repo: on $branch"
             continue
         fi
+        git -C "$dir" update-index -q --refresh 2>/dev/null
         if ! git -C "$dir" diff-index --quiet HEAD -- 2>/dev/null; then
             echo "$repo: uncommitted changes"
             continue
@@ -382,7 +383,7 @@ gpa() {                                                                         
         git -C "$dir" pull --rebase --prune >/dev/null 2>&1
         after=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
         if [[ "$before" == "$after" ]]; then
-            echo "$repo: up to date"
+            echo "$repo: \033[32m✔\033[0m"
         else
             count=$(git -C "$dir" rev-list --count "$before".."$after" 2>/dev/null)
             echo "$repo: pulled $count commits"
