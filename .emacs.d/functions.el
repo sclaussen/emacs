@@ -43,7 +43,14 @@ This function is non-interactive and can be called programmatically."
           (with-temp-buffer
             (insert-file-contents initial-buffers-file)
             (setq file-list
-                  (split-string (buffer-string) "\n" t)))
+                  (delq nil
+                        (mapcar (lambda (line)
+                                  (let ((trimmed-line (string-trim line)))
+                                    ;; Skip empty lines and commented lines (starting with #)
+                                    (when (and (not (string-empty-p trimmed-line))
+                                               (not (string-prefix-p "#" trimmed-line)))
+                                      trimmed-line)))
+                                (split-string (buffer-string) "\n" t)))))
           ;; Remove duplicates for efficiency
           (setq file-list (delete-dups file-list))
           ;; Iterate over each file path and load it into a buffer

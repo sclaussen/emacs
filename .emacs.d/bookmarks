@@ -10,7 +10,8 @@
  (last-modified 26501 47455 170843 0))
 ("org-capture-last-stored"
  (filename . "~/doc/meetings.org")
- (front-context-string . "**  [W08 Tue 02/")
- (rear-context-string . "3(3)\n* Meetings\n")
- (position . 93))
+ (front-context-string . "**  [W24 Sun 06/")
+ (rear-context-string)
+ (position . 12)
+ (last-modified 26712 13767 846986 0))
 )

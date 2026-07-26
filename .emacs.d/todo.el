@@ -1,4 +1,5 @@
 (defun todo-buffer-display ()
+  (interactive)
   (let ((todo-buffer (get-file-buffer "~/.todo.org")))
     (if todo-buffer
         (switch-to-buffer todo-buffer)
@@ -32,16 +33,13 @@
   (beginning-of-line))
 
 (defun todo-cancel ()
-  (interactive)
-  )
+  (interactive))
 
 (defun todo-raise-priority ()
-  (interactive)
-  )
+  (interactive))
 
 (defun todo-lower-priority ()
-  (interactive)
-  )
+  (interactive))
 
 (defun todo-create-p1 ()
   (interactive)

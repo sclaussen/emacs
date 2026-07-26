@@ -1,3 +1,5 @@
+(setq vc-follow-symlinks t)
+
 ;;=============================================================================
 ;; Package manager
 ;;=============================================================================
@@ -6,13 +8,14 @@
       '(("melpa"  . "https://melpa.org/packages/")
         ("gnu"    . "https://elpa.gnu.org/packages/")
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+(unless package-archive-contents
+  (package-refresh-contents))
 (package-initialize)
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
 (require 'use-package)
 (setq use-package-always-ensure t)
-
 
 ;;=============================================================================
 ;; Load my basic extensions and configuration
@@ -21,7 +24,6 @@
 (load "~/.emacs.d/keys.el")
 (load "~/.emacs.d/vars.el")
 (load "~/.emacs.d/org.el")
-(load "~/.emacs.d/todo.el")
 
 
 ;;=============================================================================
@@ -34,6 +36,29 @@
   (load-theme 'doom-shane t)
   (global-hl-line-mode +1)
   (setq custom-theme-name 'dark))
+
+
+;;=============================================================================
+;; TypeScript
+;;=============================================================================
+;; init.el / early-init.el
+(setq major-mode-remap-alist
+      '((typescript-mode . typescript-ts-mode)   ; .ts
+        (tsx-mode        . tsx-ts-mode)))        ; .tsx (Emacs 30)
+
+;; Optional: enable treesit font-lock and indentation globally
+(setq treesit-font-lock-level 4)
+
+;; (use-package typescript-mode
+;;   :ensure t
+;;   :mode ("\\.ts\\'" "\\.tsx\\'")
+;;   :hook (typescript-mode . tide-setup))
+
+;; (use-package tide
+;;   :ensure t
+;;   :after (typescript-mode company flycheck)
+;;   :hook ((typescript-mode . tide-hl-identifier-mode)
+;;          (before-save     . tide-format-before-save)))
 
 ;; (defun switch-theme ()
 ;;   "Toggle between 'doom-shane' (dark) and 'doom-one-light' (light) themes."
@@ -171,7 +196,7 @@
          ("\\.md\\'"       . markdown-mode))
   :init
   ;; If you want to interpret YAML front matter in your .md
-  (add-hook 'markdown-mode-hook 'flyspell-mode)
+  ;; (add-hook 'markdown-mode-hook 'flyspell-mode)  ; Disabled - no spell checker installed
   (setq markdown-enable-math t)
   (setq markdown-command "pandoc --from markdown --to html5 --mathjax")) ;; brew install pandoc
 
@@ -213,5 +238,10 @@
 (if (get-buffer "*scratch*")
     (kill-buffer "*scratch*"))
 
+
+(load "~/src/sync/tasks.el")
+
+;; Ensure .tasks files automatically open in task-mode
+(add-to-list 'auto-mode-alist '("\\.tasks\\'" . task-mode-for-tasks-file))
 
 (message "Welcome!")
