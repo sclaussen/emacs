@@ -131,6 +131,20 @@ if [[ $IS_MACOS == true ]]; then
     alias ccr='NODE_TLS_REJECT_UNAUTHORIZED=0 claude --settings ~/src/.claude/settings.json --mcp-config ~/src/.mcp.json --dangerously-skip-permissions --resume'
 fi
 
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Odin CLI (gw / gwi)
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# cli/gw and cli/gwi at the odin1 repo root are the macOS builds, so Debian/container
+# shells point at cli/bld/linux/ instead. Workspace root: ~/src on the host, WSROOT in the container.
+if [[ $IS_MACOS == true ]]; then
+    _odin_cli="$HOME/src/odin1/cli"
+else
+    _odin_cli="${WSROOT:-/workspaces/src}/odin1/cli/bld/linux"
+fi
+[[ -x "$_odin_cli/gw" ]] && alias gw="$_odin_cli/gw"                               # Guidewire CLI (Odin generated)
+[[ -x "$_odin_cli/gwi" ]] && alias gwi="$_odin_cli/gwi"                            # Guidewire CLI, internal build
+unset _odin_cli
+
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Node Version Manager (NVM)
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -362,32 +376,75 @@ wt() {                                                                          
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Git Pull All Repos
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-gpa() {                                                                                                            # Git pull all repos in ~/src on main with clean working tree
+gpa() {                                                                                                            # Git pull every repo in the workspace root (~/src on host, /workspaces/src in container) on main (-l to loop every 5 mins, rebuilds profile on pulled repos)
+    local loop=false
+    [[ "$1" == "-l" ]] && loop=true
+    # Workspace root varies: /workspaces/src in the container, ~/src (or the configured workspace) on the host
+    local src_dir candidate
+    src_dir=""
+    for candidate in "${WSROOT}" "$HOME/src"; do
+        [[ -n "$candidate" && -d "$candidate" ]] && { src_dir="$candidate"; break; }
+    done
+    [[ -z "$src_dir" ]] && echo "Directory not found: ${WSROOT:-$HOME/src}" && return 1
+    local repo branch before after count dir
+    local -a updated
+    while true; do
+        [[ "$loop" == true ]] && echo "--- $(date '+%Y-%m-%d %H:%M:%S') ---"
+        updated=()
+        # Every immediate subdirectory that is a repo: dev*, odin*, ai-harness*, h*, specs, dotfiles, ...
+        for dir in "$src_dir"/*(-/N); do
+            # .git is a directory in a clone and a file in a worktree
+            [[ ! -e "$dir/.git" ]] && continue
+            repo="${dir:t}"
+            branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD 2>/dev/null)
+            if [[ "$branch" != "main" && "$branch" != "master" ]]; then
+                echo "$repo: on $branch"
+                continue
+            fi
+            git -C "$dir" update-index -q --refresh 2>/dev/null
+            if ! git -C "$dir" diff-index --quiet HEAD -- 2>/dev/null; then
+                echo "$repo: uncommitted changes"
+                continue
+            fi
+            before=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
+            git -C "$dir" pull --rebase --prune >/dev/null 2>&1
+            after=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
+            if [[ "$before" == "$after" ]]; then
+                echo "$repo: \033[32m✔\033[0m"
+            else
+                count=$(git -C "$dir" rev-list --count "$before".."$after" 2>/dev/null)
+                echo "$repo: pulled $count commits"
+                updated+=("$dir")
+            fi
+        done
+        for dir in "${updated[@]}"; do
+            if [[ -f "$dir/dev.js" ]]; then
+                repo="${dir:t}"
+                echo "$repo: node dev.js profile build"
+                (builtin cd "$dir" && node dev.js profile build)
+            fi
+        done
+        [[ "$loop" != true ]] && break
+        echo "Waiting 5 minutes...  ($(date '+%Y-%m-%d %H:%M:%S'))"
+        sleep 300
+    done
+}
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Git Clone All - clone ai-dev to dev2-dev9, run dev profile build in each
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+gca() {                                                                                                            # Clone ai-dev to dev2-dev9 and run dev profile build in each
     local src_dir="$HOME/src"
     [[ ! -d "$src_dir" ]] && echo "Directory not found: $src_dir" && return 1
-    local repo branch before after count
-    for dir in "$src_dir"/dev*/ "$src_dir"/odin/; do
-        [[ ! -d "$dir/.git" ]] && continue
-        repo="${dir:t:r}"
-        branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD 2>/dev/null)
-        if [[ "$branch" != "main" && "$branch" != "master" ]]; then
-            echo "$repo: on $branch"
-            continue
-        fi
-        git -C "$dir" update-index -q --refresh 2>/dev/null
-        if ! git -C "$dir" diff-index --quiet HEAD -- 2>/dev/null; then
-            echo "$repo: uncommitted changes"
-            continue
-        fi
-        before=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
-        git -C "$dir" pull --rebase --prune >/dev/null 2>&1
-        after=$(git -C "$dir" rev-parse HEAD 2>/dev/null)
-        if [[ "$before" == "$after" ]]; then
-            echo "$repo: \033[32m✔\033[0m"
-        else
-            count=$(git -C "$dir" rev-list --count "$before".."$after" 2>/dev/null)
-            echo "$repo: pulled $count commits"
-        fi
+
+    local repo_url="git@github.com:gwre-pdo/ai-dev.git"
+    local i dir
+    for i in {2..9}; do
+        dir="$src_dir/dev$i"
+        echo "dev$i: git clone $repo_url"
+        git clone "$repo_url" "$dir" || { echo "dev$i: clone failed"; continue; }
+        echo "dev$i: node dev.js profile build"
+        (builtin cd "$dir" && node dev.js profile build)
     done
 }
 
@@ -407,7 +464,6 @@ gt() { echo "git tag -l"; git tag -l; }                                         
 gb() { echo "git branch -avv"; git branch -avv; }                                                                  # List all branches with details
 gbd() { echo "git branch -D $@"; git branch -D "$@"; }                                                             # Delete a feature branch
 gbehind() { echo "git log --pretty=format:'%Cblue%ad %Creset%s%Cgreen [%cn] %Cred%d' --decorate --date=short -n 25 ^$(git rev-parse --abbrev-ref HEAD) master"; git log --pretty=format:"%Cblue%ad %Creset%s%Cgreen [%cn] %Cred%d" --decorate --date=short -n 25 "^$(git rev-parse --abbrev-ref HEAD)" master; } # Show commits behind master
-gca() { echo "git commit --amend"; git commit --amend; }                                                           # Amend the last commit
 gchanges() { echo "git log $(git merge-base HEAD master)..$(git symbolic-ref --short HEAD)"; git log "$(git merge-base HEAD master)".."$(git symbolic-ref --short HEAD)"; } # Show changes between current branch and master
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -184,7 +184,7 @@ function md() {
     npx @aidev/dev@latest md "$@"
 }
 
-# Aliases for local dev CLI versions (dev1-dev5)
+# Aliases for local dev CLI versions (dev1-dev9)
 alias dev1='node ~/src/dev1/dev.js'
 alias dev2='node ~/src/dev2/dev.js'
 alias dev3='node ~/src/dev3/dev.js'
@@ -192,6 +192,8 @@ alias dev4='node ~/src/dev4/dev.js'
 alias dev5='node ~/src/dev5/dev.js'
 alias dev6='node ~/src/dev6/dev.js'
 alias dev7='node ~/src/dev7/dev.js'
+alias dev8='node ~/src/dev8/dev.js'
+alias dev9='node ~/src/dev9/dev.js'
 
 # Test runner aliases
 alias t1='node ~/src/dev1/test/test.js'
@@ -201,6 +203,8 @@ alias t4='node ~/src/dev4/test/test.js'
 alias t5='node ~/src/dev5/test/test.js'
 alias t6='node ~/src/dev6/test/test.js'
 alias t7='node ~/src/dev7/test/test.js'
+alias t8='node ~/src/dev8/test/test.js'
+alias t9='node ~/src/dev9/test/test.js'
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # macOS History Configuration

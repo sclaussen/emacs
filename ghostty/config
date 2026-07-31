@@ -1,0 +1,57 @@
+# Ghostty config — matches iTerm2 defaults
+# Install to: ~/.config/ghostty/config
+
+# Font (iTerm2 default)
+font-family = Monaco
+font-size = 12
+
+# Colors (iTerm2 default)
+background = 000000
+foreground = c7c7c7
+
+# Cursor (iTerm2 default: block, blinking)
+cursor-color = c7c7c7
+cursor-text = 000000
+cursor-style = block
+cursor-style-blink = true
+
+# Selection (iTerm2 default blue highlight)
+selection-background = c1deff
+selection-foreground = 000000
+
+# ANSI color palette (iTerm2 defaults)
+palette = 0=#000000
+palette = 1=#c91b00
+palette = 2=#00c200
+palette = 3=#c7c400
+palette = 4=#0225c7
+palette = 5=#c930c7
+palette = 6=#00c5c7
+palette = 7=#c7c7c7
+palette = 8=#686868
+palette = 9=#ff6e67
+palette = 10=#5ffa68
+palette = 11=#fffc67
+palette = 12=#6871ff
+palette = 13=#ff77ff
+palette = 14=#60fdff
+palette = 15=#ffffff
+
+# Scrollback (iTerm2 default ~1000 lines; Ghostty uses bytes, 10MB = default)
+scrollback-limit = 10000000
+
+# Window (iTerm2-like padding)
+window-padding-x = 5
+window-padding-y = 5
+
+# Mouse (iTerm2 enables copy-on-select)
+copy-on-select = true
+
+# Shell integration (iTerm2 has its own; Ghostty equivalent)
+shell-integration = detect
+
+# Window close confirmation (iTerm2 prompts before closing)
+confirm-close-surface = true
+
+# Link clicking (iTerm2 supports cmd-click to open URLs)
+link-url = true
