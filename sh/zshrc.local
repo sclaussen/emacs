@@ -376,7 +376,7 @@ wt() {                                                                          
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Git Pull All Repos
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-gpa() {                                                                                                            # Git pull every repo in the workspace root (~/src on host, /workspaces/src in container) on main (-l to loop every 5 mins, rebuilds profile on pulled repos)
+pall() {                                                                                                            # Git pull every repo in the workspace root (~/src on host, /workspaces/src in container) on main (-l to loop every 5 mins, rebuilds profile on pulled repos)
     local loop=false
     [[ "$1" == "-l" ]] && loop=true
     # Workspace root varies: /workspaces/src in the container, ~/src (or the configured workspace) on the host
